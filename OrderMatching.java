@@ -35,7 +35,7 @@ public class OrderMatching{
 				 			"4. Execute order\n5. Get Lowest Sell\n6. Get Highest Buy\n"+
 				 			"7. Get Issuer ID\n8. Final Balance");
 
-		for(int i_loop=0; i_loop<5; i_loop++){
+		for(int i_loop=0; i_loop<10; i_loop++){
 			System.out.println("Select option:");
 			int option = Integer.parseInt(br.readLine());
 
@@ -52,12 +52,12 @@ public class OrderMatching{
 							order_id++;
 							orderbook.put(order_id, new Order(issuer_id, "buy", quantity, price));
 							//Setup the tree
-							buyTree.root = buyTree.insert(buyTree.root, price, order_id);
+							buyTree.root = buyTree.insert(buyTree.root, price, order_id, quantity);
 						} else if(order_type.toLowerCase().equals("s") || order_type.toLowerCase().equals("sell")){
 							order_id++;
 							orderbook.put(order_id, new Order(issuer_id, "sell", quantity, price));
 							//Setup the tree
-							sellTree.root = sellTree.insert(sellTree.root, price, order_id);
+							sellTree.root = sellTree.insert(sellTree.root, price, order_id, quantity);
 						} else {
 							System.out.println("No such order type present.");
 						}
@@ -84,19 +84,30 @@ public class OrderMatching{
 				case 4: System.out.println("Id of executing order: ");
 						int execute_id = Integer.parseInt(br.readLine());
 						//Write here, need to update all orderbook, account_book, buy tree and sell tree.
+						Order execute_order = (Order) orderbook.get(execute_id);
+						if(execute_order.getType().equals("buy")){
+							sellTree.executeSell(sellTree.root, execute_id, orderbook, account_book);
+						} else {
+
+						}
 						break;
 
-				case 5: System.out.println("Lowest sell available: " + sellTree.lowestSell(sellTree.root));
+				case 5: Node lowSell = sellTree.lowestSell(sellTree.root);
+						if(lowSell != null) System.out.println("Lowest sell available: " + lowSell.price);
+						else System.out.println("Lowest sell available: " + 0);
 						break;
 
-				case 6: System.out.println("Highest buy available: " + buyTree.highestBuy(buyTree.root));
+				case 6: Node highBuy = buyTree.highestBuy(buyTree.root);
+						if(highBuy != null) System.out.println("Highest buy available: " + highBuy.price);
+						else System.out.println("Highest buy available: " + 0);
 						break;
 
 				case 7: printIds(account_book);
 						break;
 
 				//Update each balance account after execution of orders
-				case 8: break;
+				case 8: printBalance(account_book);
+						break;
 
 				default: System.out.println("Wrong option selected!");
 			}
@@ -107,6 +118,13 @@ public class OrderMatching{
 		for(Map.Entry<Integer, Issuer> entry: hm.entrySet()){
 			Issuer i = entry.getValue();
 			System.out.println(entry.getKey()+" "+i.name);
+		}
+	}
+
+	static void printBalance(HashMap<Integer, Issuer> hm){
+		for(Map.Entry<Integer, Issuer> entry: hm.entrySet()){
+			Issuer i = entry.getValue();
+			System.out.println(entry.getKey()+" "+i.name+" "+i.balance+" "+i.quantity);
 		}
 	}
 }
