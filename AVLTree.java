@@ -47,14 +47,14 @@ public class AVLTree{
 		return x;
 	}
 
-	static Node insert(Node root, int price, int order_id){
+	static Node insert(Node root, int price, int order_id, int quantity){
 		if(root == null)
-			return new Node(price, order_id);
+			return new Node(price, order_id, quantity);
 
 		if(price < root.price)
-			root.left = insert(root.left, price, order_id);
+			root.left = insert(root.left, price, order_id, quantity);
 		else if(price >= root.price)
-			root.right = insert(root.right, price, order_id);
+			root.right = insert(root.right, price, order_id, quantity);
 		
 		root.height = 1 + Math.max(height(root.left), height(root.right));
 
@@ -151,28 +151,93 @@ public class AVLTree{
         return root;
 	}
 
-	static int lowestSell(Node node){
+	static Node lowestSell(Node node){
 		if(node == null)
-			return 0;
+			return null;
 
 		Node current = node;  
   
         while (current.left != null)  
 	        current = current.left;  
   
-        return current.price;
+        return current;
 	}
 
-	static int highestBuy(Node node){
+	static Node highestBuy(Node node){
 		if(node == null)
-			return 0;
+			return null;
 
 		Node current = node;
   
         while (current.right != null)  
 	        current = current.right;
   
-        return current.price;
+        return current;
+	}
+
+	static Node lowNode(Node node, int price){//, int issuer, HashMap<Integer, Order> hmOrder){
+		if(node == null)
+			return null;
+
+		Node current = node;
+  
+        while(current.left != null){
+			if(current.left.price < current.price){ //&& issuer != hmOrder.get(current.left.id).getIssuer()){
+				current = current.left;
+			}
+		} 
+
+		if(current.price > node.price)
+			return null;
+  
+        return current;
+	}
+
+	static void executeSell(Node node, int nodeOrderID, HashMap<Integer, Order> hmOrder, HashMap<Integer, Issuer> hmIss){
+		Node lowestPoss = node;
+
+		Order execute_order = (Order) hmOrder.get(nodeOrderID);
+		int exe_issuer = execute_order.getIssuer();
+		int exe_price = execute_order.getPrice();
+		int exe_quant = execute_order.getQuantity();
+
+		//Buying coins at lowest possible value
+		Node lowest = lowNode(node, exe_price);
+
+		if(lowest == null)
+			return;
+		else{
+			int lowQuan = lowestPoss.quantity;
+			int lowPrice = lowestPoss.price;
+			int lowOrderID = lowestPoss.id;
+
+			int lowOrderIss = hmOrder.get(lowOrderID).getIssuer();
+			
+			Issuer lowIssuer = hmIss.get(lowOrderID);
+			String lowIssName = lowIssuer.name;
+			int lowIssBal = lowIssuer.balance;
+			int lowIssQuan = lowIssuer.quantity;
+
+			Issuer i = hmIss.get(exe_issuer);
+			String name = i.name;
+			int balance = i.balance;
+			int quantity = i.quantity;
+
+			hmIss.replace(exe_issuer, new Issuer(name, balance - lowPrice*lowQuan, quantity + lowQuan));
+			hmIss.replace(lowOrderIss, new Issuer(lowIssName, lowIssBal + lowPrice*lowQuan, lowIssQuan - lowQuan));
+
+			if(lowQuan > exe_quant){
+				hmOrder.remove(nodeOrderID);
+				hmOrder.replace(lowOrderID, new Order(lowOrderIss, "sell", lowQuan - exe_quant, lowPrice));
+			} else if(lowQuan == exe_quant){
+				hmOrder.remove(lowOrderID);
+				hmOrder.remove(nodeOrderID);
+			} else{
+				hmOrder.remove(lowOrderID);
+				hmOrder.replace(nodeOrderID, new Order(exe_issuer, "buy", exe_quant - lowQuan, exe_price));
+				executeSell(node, nodeOrderID, hmOrder, hmIss);
+			}
+		}
 	}
 
 	static void preOrder(Node node){
